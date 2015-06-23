@@ -11,7 +11,7 @@ data InnerState n a = S {
     queue  :: Vec n a
 } deriving(Show)
 
-data Output a = Out QueueStatus a
+data Output a = Out QueueStatus (Maybe a)
 data Input a  = Push a | Pop | Nop
 
 initState x = S (Right Ready) 0 0 (repeat x)
@@ -25,3 +25,7 @@ priority_queueS :: (KnownNat n , Ord a)
 priority_queueS = undefined
 topEntity :: Signal (Input Int) -> Signal (Output Int)
 topEntity = minQ_S `mealy` (initState 0 :: InnerState 100 Int)
+
+getOut :: (KnownNat n) => InnerState (n + 1) a -> Output a  
+getOut (S st 0  _ _) = Out st Nothing
+getOut (S st sz _ q) = Out st (Just $ head q)
