@@ -1,2 +1,3 @@
 *.swp
-verilog/ # verilog, temporally ignored
+# verilog, temporally ignored
+verilog/
