@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月23日 星期二 21时14分32秒 二
+-- Last Modified:2015年06月23日 星期二 22时36分30秒 二
 import CLaSH.Prelude
 type Size           = Unsigned 16
 data NormalStatus   = Pushing  | Poping | Ready deriving(Show)
@@ -49,7 +49,7 @@ initPush (S st sz id qu) val
 processPush :: (KnownNat (n+1), Ord a) => Ordering -> InnerState (n+1) a -> InnerState (n+1) a
 processPush ord (S st sz idx qu) = 
     let val  = qu !! idx
-        pId  = shiftR idx 1
+        pId  = shiftR (idx-1) 1
         pVal = qu !! pId
         comp = idx == 0 || compare val pVal == ord || compare val pVal == EQ
      in if comp
