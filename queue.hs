@@ -35,8 +35,13 @@ priorityQueueS ord st@(S (Right Poping)  _ _ _)  _          = processPop  ord st
 initPop :: (KnownNat (n+1), Ord a) => InnerState (n+1) a -> InnerState (n+1) a
 initPop (S st 0  id qu) = S (Left  Empty)  0      id qu
 initPop (S st sz id qu) = S (Right Poping) (sz-1) 0 nqu 
-    where nqu = swap qu 0 (sz - 1)
-initPush    = undefined
+    where nqu = replace 0 (qu !! (sz - 1)) qu
+initPush :: (KnownNat (n+1), Ord a) => InnerState (n+1) a -> a -> InnerState (n+1) a
+initPush (S st sz id qu) val
+    | overflow  = S (Left Overflow) sz     id qu
+    | otherwise = S (Right Pushing) (sz+1) sz nqu
+      where overflow = sz == (fromInteger $ length $ qu)
+            nqu      = replace sz val qu
 processPop  = undefined
 processPush = undefined
 
