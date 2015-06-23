@@ -1,4 +1,6 @@
 module Queue where 
+-- Author: lvwenlong_lambda@qq.com
+-- Last Modified:2015年06月23日 星期二 21时14分32秒 二
 import CLaSH.Prelude
 type Size           = Unsigned 16
 data NormalStatus   = Pushing  | Poping | Ready deriving(Show)
@@ -79,6 +81,7 @@ topEntity :: Signal (Input Int) -> Signal (Output Int)
 topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
 
 
+-- probable modification: Nothing if busy / error
 getOut :: (KnownNat n) => InnerState (n + 1) a -> Output a  
 getOut (S st 0  _ _) = Out st Nothing
 getOut (S st sz _ q) = Out st (Just $ head q)
