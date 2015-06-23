@@ -17,7 +17,7 @@ data Input a  = Push a | Pop | Nop
 initState x = S (Right Ready) 0 0 (repeat x)
 minQS = priorityQueueS LT
 maxQS = priorityQueueS GT
-priorityQueueS :: (KnownNat n , Ord a) 
+priorityQueueS :: (KnownNat (n+1) , Ord a) 
                 => Ordering             -- determine max_queue or min_queue 
                 -> InnerState (n+1) a   -- state
                 -> Input a              -- input 
@@ -32,10 +32,10 @@ priorityQueueS ord st@(S (Right Poping)  _ _ _)  _          = processPop  ord st
 
 -- 可能的改进： 有error时top为nothing 
 -- 可能的改进： normal但是不是ready是为nothing
-initPop :: (KnownNat n, Ord a) => InnerState (n+1) a -> InnerState (n+1) a
+initPop :: (KnownNat (n+1), Ord a) => InnerState (n+1) a -> InnerState (n+1) a
 initPop (S st 0  id qu) = S (Left  Empty)  0      id qu
 initPop (S st sz id qu) = S (Right Poping) (sz-1) 0 nqu 
-    where nqu = qu <<+ head qu
+    where nqu = swap qu 0 (sz - 1)
 initPush    = undefined
 processPop  = undefined
 processPush = undefined
