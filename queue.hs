@@ -43,20 +43,38 @@ initPush (S st sz id qu) val
       where overflow = sz == (fromInteger $ length $ qu)
             nqu      = replace sz val qu
 
+-- processPush and processPop probably could be writtin in on process function
 processPush :: (KnownNat (n+1), Ord a) => Ordering -> InnerState (n+1) a -> InnerState (n+1) a
-processPush ord (S st sz id qu) = 
-    let val  = qu !! id
-        pId  = shiftR id 1
+processPush ord (S st sz idx qu) = 
+    let val  = qu !! idx
+        pId  = shiftR idx 1
         pVal = qu !! pId
-        comp = id == 0 || compare val pVal == ord || compare val pVal == EQ
+        comp = idx == 0 || compare val pVal == ord || compare val pVal == EQ
      in if comp
-           then S st sz pId (swap qu id pId) -- not finished
-           else S (Right Ready) sz id qu
+           then S st sz pId (swap qu idx pId) -- not finished
+           else S (Right Ready) sz idx qu
 
 processPop :: (KnownNat (n+1), Ord a) => Ordering -> InnerState (n+1) a -> InnerState (n+1) a
-processPop  = undefined
+processPop ord (S st sz idx qu) = 
+    let swapIdx = getSwapIdx ord qu idx sz
+     in if (swapIdx /= idx)
+           then S st sz swapIdx (swap qu idx swapIdx)
+           else S (Right Ready) sz idx qu
 
 
+getSwapIdx  :: (KnownNat (n+1), Ord a) => Ordering -> Vec (n+1) a -> Size -> Size -> Size
+getSwapIdx ord qu idx size = 
+    let c1Idx  = 2 * idx + 1
+        c2Idx  = 2 * idx + 2
+        comp1  = compare (qu !! idx)    (qu !! c1Idx) -- might overflow 
+        comp2  = compare (qu !! tmpIdx) (qu !! c2Idx) -- might overflow 
+        tmpIdx = if c1Idx < size && comp1 /= ord && comp1 /= EQ 
+                    then c1Idx 
+                    else idx-- swap
+        retIdx = if c2Idx < size && comp2 /= ord && comp1 /= EQ
+                    then c2Idx
+                    else tmpIdx 
+        in retIdx
 topEntity :: Signal (Input Int) -> Signal (Output Int)
 topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
 
