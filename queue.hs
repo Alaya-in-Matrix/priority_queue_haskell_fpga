@@ -42,8 +42,19 @@ initPush (S st sz id qu) val
     | otherwise = S (Right Pushing) (sz+1) sz nqu
       where overflow = sz == (fromInteger $ length $ qu)
             nqu      = replace sz val qu
+
+processPush :: (KnownNat (n+1), Ord a) => Ordering -> InnerState (n+1) a -> InnerState (n+1) a
+processPush ord (S st sz id qu) = 
+    let val  = qu !! id
+        pId  = shiftR id 1
+        pVal = qu !! pId
+        comp = id == 0 || compare val pVal == ord || compare val pVal == EQ
+     in if comp
+           then S st sz pId (swap qu id pId) -- not finished
+           else S (Right Ready) sz id qu
+
+processPop :: (KnownNat (n+1), Ord a) => Ordering -> InnerState (n+1) a -> InnerState (n+1) a
 processPop  = undefined
-processPush = undefined
 
 
 topEntity :: Signal (Input Int) -> Signal (Output Int)
