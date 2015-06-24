@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月24日 星期三 18时55分29秒 三
+-- Last Modified:2015年06月24日 星期三 18时59分11秒 三
 import CLaSH.Prelude
 import Debug.Trace
 type Size           = Unsigned 16
@@ -145,8 +145,10 @@ heapSort (HSS vec (SPop idx))  ((Out (Right Ready)  (Just top)), _)
     | otherwise   = HSS (vec <<+ top) $ SPop $ idx - 1
       where popFinished = idx == 0
 
-
-
+heapSortOut :: (KnownNat (n+1), Ord a) 
+            => HeapSortState (n+1) a
+            -> Maybe (Vec n a)
+heapSortOut = undefined
 topEntity :: Signal (Input Int) -> Signal (Output Int)
 topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
 testInput :: Signal (Input Int)
