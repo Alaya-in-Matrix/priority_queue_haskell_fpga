@@ -1,8 +1,9 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月24日 星期三 19时56分03秒 三
+-- Last Modified:2015年06月24日 星期三 22时41分50秒 三
 import CLaSH.Prelude
 import Debug.Trace
+import qualified Data.List
 type Size           = Unsigned 16
 data NormalStatus   = Pushing  | Poping | Ready deriving(Show)
 data ErrorStatus    = Overflow | Empty deriving(Show)
@@ -16,21 +17,22 @@ data InnerState n a = S {
 
 data Output a = Out QueueStatus (Maybe a)   deriving(Show)
 data Input a  = Push a | Pop | Nop          deriving(Show)
-
+(~~) = (Data.List.++)
 initState x = S (Right Ready) 0 0 (repeat x)
 minQS = priorityQueueS LT
 maxQS = priorityQueueS GT
-priorityQueueS :: (KnownNat (n+1) , Ord a) 
+-- 可能的改进： 在pop/push的init的时候做一次swap，可以节省一个clock cycle
+priorityQueueS :: (KnownNat (n+1) , Ord a, Show a) 
                 => Ordering             -- determine max_queue or min_queue 
                 -> InnerState (n+1) a   -- state
                 -> Input a              -- input 
                 -> InnerState (n+1) a   -- (state, output)
-priorityQueueS _   st@(S (Left _)        _ _ _)  _          = st                    -- Error handling
-priorityQueueS _   st@(S (Right Ready)   _ _ _)  Nop        = st                    -- Nothing todo
-priorityQueueS _   st@(S (Right Ready)   _ _ _)  Pop        = initPop  st           -- Received pop signal
-priorityQueueS _   st@(S (Right Ready)   _ _ _)  (Push val) = initPush st val       -- Received push signal
-priorityQueueS ord st@(S (Right Pushing) _ _ _)  _          = processPush ord st    -- Processing push
-priorityQueueS ord st@(S (Right Poping)  _ _ _)  _          = processPop  ord st    -- Processing pop
+priorityQueueS _   st@(S (Left _)        _ _ _)  qIn@_          = st                    -- Error handling
+priorityQueueS _   st@(S (Right Ready)   _ _ _)  qIn@Nop        = st                    -- Nothing todo
+priorityQueueS _   st@(S (Right Ready)   _ _ _)  qIn@Pop        = initPop  st           -- Received pop signal
+priorityQueueS _   st@(S (Right Ready)   _ _ _)  qIn@(Push val) = initPush st val       -- Received push signal
+priorityQueueS ord st@(S (Right Pushing) _ _ _)  qIn@_          = processPush ord st    -- Processing push
+priorityQueueS ord st@(S (Right Poping)  _ _ _)  qIn@_          = processPop  ord st    -- Processing pop
 
 
 -- 可能的改进： 有error时top为nothing 
@@ -74,7 +76,7 @@ getSwapIdx ord qu idx size =
         tmpIdx = if c1Idx < size && comp1 /= ord && comp1 /= EQ 
                     then c1Idx 
                     else idx-- swap
-        retIdx = if c2Idx < size && comp2 /= ord && comp1 /= EQ
+        retIdx = if c2Idx < size && comp2 /= ord && comp2 /= EQ
                     then c2Idx
                     else tmpIdx 
         in retIdx
@@ -82,7 +84,7 @@ getSwapIdx ord qu idx size =
 
 -- probable modification: Nothing if busy / error
 -- probable add "topValid" signal
-getOut :: (KnownNat n) => InnerState (n + 1) a -> Output a  
+getOut :: (KnownNat (n+1)) => InnerState (n + 1) a -> Output a  
 getOut (S st 0  _ _) = Out st Nothing
 getOut (S st sz _ q) = Out st (Just $ head q)
 swap :: (KnownNat (n + 1)) => Vec (n + 1) a -> Size -> Size -> Vec (n + 1) a
@@ -91,27 +93,6 @@ swap vec idx1 idx2 = replace idx1 v2 $ replace idx2 v1 $ vec
           v2 = vec !! idx2
 
 decCounter = register 200 $ decCounter - 1
-
-
-
--- topEntity :: Signal (Input Int) -> Signal (Output Int)
--- topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
-
-
--- delaySig ::(Integral a) =>  a -> (i, i) -> (a,i)
--- delaySig 0 (sig1,sig2) = (0,   sig2)
--- delaySig c (sig1,sig2) = (c-1, sig1)
-
--- choose n = delaySig `mealy` n
-
--- popSignal  = signal Pop :: Signal (Input a)
--- pushSignal :: (Num a) => Signal (Input a)
--- pushSignal = fmap (\n -> Push n) decCounter 
-
--- testInput :: Signal (Input Int)
--- testInput = choose 200 $ bundle (pushSignal, popSignal)
-
--- -- s n = mapM_ print $ sampleN n (topEntity testInput)
 
 data HeapSortState n a = HSS{
     vec       :: Vec n a,
@@ -126,38 +107,57 @@ data SortInnerState = SPush Size
 -- heapSortS :: state -> input -> (state, output)
 -- use moore model, 
 -- heapSortS :: state -> input -> state
-heapSortS :: (KnownNat (n+1), Ord a, Default a) 
+heapSortS :: (KnownNat (n+1), Ord a, Default a, Show a) 
          => HeapSortState (n+1) a       -- inner state
          -> (Output a, Maybe (Vec n a))     -- input vector and the output of priorityQueue as input of this contro logic
          -> HeapSortState (n+1) a       -- new state
-heapSortS (HSS vec _)           ((Out (Left  _)       _), _)         = HSS vec SError         -- error handling
-heapSortS (HSS vec SError)  _                                        = HSS vec SError         -- error handling
-heapSortS oldState              ((Out (Right Pushing) _), _)         = oldState               -- the priority queue is busy pushing, ignore input, keep state as is
-heapSortS oldState              ((Out (Right Poping)  _), _)         = oldState               -- the priority queue is busy Poping, ignore input, keep state as is
-heapSortS oldst@(HSS _ Sorted)  ((Out (Right Ready)   _), Nothing)   = oldst                  -- Nothing to do
-heapSortS (HSS _ Sorted)        ((Out (Right Ready)   _), (Just v))  = HSS (def:>v) (SPush 1) -- init
-heapSortS (HSS vec (SPush idx)) ((Out (Right Ready)   _), _)
+heapSortS oldst@(HSS vec _)           qOut@((Out (Left  _)       _), _)        = HSS vec SError         -- error handling
+heapSortS oldst@(HSS vec SError)      qOut@ _                                  = HSS vec SError         -- error handling
+heapSortS oldst                       qOut@((Out (Right Pushing) _), _)        = oldst               -- the priority queue is busy pushing, ignore input, keep state as is
+heapSortS oldst                       qOut@((Out (Right Poping)  _), _)        = oldst               -- the priority queue is busy Poping, ignore input, keep state as is
+heapSortS oldst@(HSS _ Sorted)        qOut@((Out (Right Ready)   _), Nothing)  = oldst                  -- Nothing to do
+heapSortS oldst@(HSS _ Sorted)        qOut@((Out (Right Ready)   _), (Just v)) = HSS (def:>v) (SPush 1) -- init
+heapSortS oldst@(HSS vec (SPush idx)) qOut@((Out (Right Ready)   _), _)
     | pushFinished       = HSS vec $ SPop (fromInteger $ maxIndex vec)
     | otherwise          = HSS vec $ SPush (idx + 1)
-      where pushFinished = idx >= (fromInteger $ length vec)
-heapSortS (HSS vec (SPop idx))  ((Out (Right Ready)  (Just top)), _)
-    | popFinished = HSS vec Sorted
-    | otherwise   = HSS (vec <<+ top) $ SPop $ idx - 1
-      where popFinished = idx == 0
-heapSortO :: (KnownNat (n+1), Ord a) 
+      where pushFinished = idx >= (fromInteger $ maxIndex vec)
+heapSortS (HSS vec (SPop 0))    ((Out (Right Ready)  _), _)          = HSS vec Sorted
+heapSortS (HSS vec (SPop idx))  ((Out (Right Ready)  (Just top)), _) = HSS (vec <<+ top) $ SPop $ idx - 1
+heapSortO :: (KnownNat (n+1), Ord a, Show a) 
             => HeapSortState (n+1) a
             -> (Input a, Maybe (Vec n a))
-heapSortO (HSS vec Sorted)      = (Nop, Just $ tail vec)
-heapSortO (HSS vec SError)      = (Nop, Nothing)
-heapSortO (HSS vec (SPop _))    = (Pop, Nothing)
-heapSortO (HSS vec (SPush idx)) = (Push $ vec !! idx , Nothing)
+heapSortO st@(HSS vec Sorted)      = (Nop, Just $ tail vec)
+heapSortO st@(HSS vec SError)      = (Nop, Nothing)
+heapSortO st@(HSS vec (SPop 0))    = (Nop, Nothing)
+heapSortO st@(HSS vec (SPop _))    = (Pop, Nothing)
+heapSortO st@(HSS vec (SPush idx)) = (Push $ vec !! idx , Nothing)
 heapSortInitState :: (KnownNat (n+1), Default a) => HeapSortState (n+1) a
 heapSortInitState = HSS (repeat def) Sorted
+
+-- heapSortCtrl :: (KnownNat (n+1), Ord a, Default a)
+--              => Signal (Output a, Maybe (Vec (n+1) a)) 
+--              -> Signal (Input a, Maybe (Vec (n+1) a))
 heapSortCtrl = moore heapSortS heapSortO heapSortInitState
-topEntity :: Signal (Input Int) -> Signal (Output Int)
-topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
-testInput :: Signal (Input Int)
-testInput = stimuliGenerator $ Nop :> (Push 3) :> Nop :> Nop :> (Push 4) :> Nop :> Nop :> Pop :> Nop :> Pop :> Nop :> Nil
-f n = mapM_ print $ sampleN n bun
-    where bun :: Signal (Input Int, Output Int)
+
+heapSortCircuit minQ control vecIn =  vecOut
+    where (qIn,vecOut) = unbundle $ control $ bundle (qOut,vecIn)
+          qOut         = minQ qIn
+
+
+minQ :: Signal (Input Int) -> Signal (Output Int)
+minQ = moore minQS getOut (initState def :: InnerState VecSize Int)
+heapSort :: Signal (Maybe (Vec VecSize Int)) -> Signal (Maybe (Vec VecSize Int))
+heapSort = heapSortCircuit minQ heapSortCtrl
+
+topEntity = heapSort
+type VecSize = 10 
+testVec :: Maybe (Vec VecSize Int)
+testVec   = Just $(v [9,2,6,5,3,5,8,9,7,9::Int])
+testInput = stimuliGenerator $ testVec :> Nothing :> Nil
+
+
+fuck str = "\n" ~~ str ~~ "\n"
+
+samp n = mapM_ putStrLn $ fmap (fuck.show) $ sampleN n bun
+    where bun :: Signal (Maybe (Vec VecSize Int), Maybe (Vec VecSize Int))
           bun = bundle (testInput, topEntity testInput)
