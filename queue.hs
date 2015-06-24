@@ -1,7 +1,8 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月24日 星期三 09时26分53秒 三
+-- Last Modified:2015年06月24日 星期三 10时39分56秒 三
 import CLaSH.Prelude
+import Debug.Trace
 type Size           = Unsigned 16
 data NormalStatus   = Pushing  | Poping | Ready deriving(Show)
 data ErrorStatus    = Overflow | Empty deriving(Show)
@@ -51,10 +52,10 @@ processPush ord (S st sz idx qu) =
     let val  = qu !! idx
         pId  = shiftR (idx-1) 1
         pVal = qu !! pId
-        comp = idx == 0 || compare val pVal == ord || compare val pVal == EQ
+        comp = idx == 0 || compare pVal val == ord || compare pVal val == EQ
      in if comp
-           then S st sz pId (swap qu idx pId) -- not finished
-           else S (Right Ready) sz idx qu
+           then S (Right Ready) sz idx qu     -- finished
+           else S st sz pId (swap qu idx pId) -- not finished
 
 processPop :: (KnownNat (n+1), Ord a) => Ordering -> InnerState (n+1) a -> InnerState (n+1) a
 processPop ord (S st sz idx qu) = 
@@ -77,11 +78,10 @@ getSwapIdx ord qu idx size =
                     then c2Idx
                     else tmpIdx 
         in retIdx
-topEntity :: Signal (Input Int) -> Signal (Output Int)
-topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
 
 
 -- probable modification: Nothing if busy / error
+-- probable add "topValid" signal
 getOut :: (KnownNat n) => InnerState (n + 1) a -> Output a  
 getOut (S st 0  _ _) = Out st Nothing
 getOut (S st sz _ q) = Out st (Just $ head q)
@@ -89,3 +89,27 @@ swap :: (KnownNat (n + 1)) => Vec (n + 1) a -> Size -> Size -> Vec (n + 1) a
 swap vec idx1 idx2 = replace idx1 v2 $ replace idx2 v1 $ vec
     where v1 = vec !! idx1
           v2 = vec !! idx2
+
+decCounter = register 200 $ decCounter - 1
+
+
+
+-- topEntity :: Signal (Input Int) -> Signal (Output Int)
+-- topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
+
+
+-- delaySig ::(Integral a) =>  a -> (i, i) -> (a,i)
+-- delaySig 0 (sig1,sig2) = (0,   sig2)
+-- delaySig c (sig1,sig2) = (c-1, sig1)
+
+-- choose n = delaySig `mealy` n
+
+-- popSignal  = signal Pop :: Signal (Input a)
+-- pushSignal :: (Num a) => Signal (Input a)
+-- pushSignal = fmap (\n -> Push n) decCounter 
+
+-- testInput :: Signal (Input Int)
+-- testInput = choose 200 $ bundle (pushSignal, popSignal)
+
+-- -- s n = mapM_ print $ sampleN n (topEntity testInput)
+
