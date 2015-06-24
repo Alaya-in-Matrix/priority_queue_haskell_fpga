@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月24日 星期三 16时01分29秒 三
+-- Last Modified:2015年06月24日 星期三 18时55分29秒 三
 import CLaSH.Prelude
 import Debug.Trace
 type Size           = Unsigned 16
@@ -122,11 +122,10 @@ data SortInnerState = SPush Size
                     | SError
                     | Sorted deriving(Show)
 
--- use moore model, 
--- heapSort :: state -> input -> state
 -- use mealy model, 
 -- heapSort :: state -> input -> (state, output)
--- 可能会出现index整数溢出的情况
+-- use moore model, 
+-- heapSort :: state -> input -> state
 heapSort :: (KnownNat (n+1), Ord a, Default a) 
          => HeapSortState (n+1) a       -- inner state
          -> (Output a, Maybe (Vec n a))     -- input vector and the output of priorityQueue as input of this contro logic
@@ -145,3 +144,13 @@ heapSort (HSS vec (SPop idx))  ((Out (Right Ready)  (Just top)), _)
     | popFinished = HSS vec Sorted
     | otherwise   = HSS (vec <<+ top) $ SPop $ idx - 1
       where popFinished = idx == 0
+
+
+
+topEntity :: Signal (Input Int) -> Signal (Output Int)
+topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
+testInput :: Signal (Input Int)
+testInput = stimuliGenerator $ Nop :> (Push 3) :> Nop :> Nop :> (Push 4) :> Nop :> Nop :> Pop :> Nop :> Pop :> Nop :> Nil
+f n = mapM_ print $ sampleN n bun
+    where bun :: Signal (Input Int, Output Int)
+          bun = bundle (testInput, topEntity testInput)
