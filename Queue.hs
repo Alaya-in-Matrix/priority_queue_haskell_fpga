@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月24日 星期三 18时59分11秒 三
+-- Last Modified:2015年06月24日 星期三 19时56分03秒 三
 import CLaSH.Prelude
 import Debug.Trace
 type Size           = Unsigned 16
@@ -123,32 +123,37 @@ data SortInnerState = SPush Size
                     | Sorted deriving(Show)
 
 -- use mealy model, 
--- heapSort :: state -> input -> (state, output)
+-- heapSortS :: state -> input -> (state, output)
 -- use moore model, 
--- heapSort :: state -> input -> state
-heapSort :: (KnownNat (n+1), Ord a, Default a) 
+-- heapSortS :: state -> input -> state
+heapSortS :: (KnownNat (n+1), Ord a, Default a) 
          => HeapSortState (n+1) a       -- inner state
          -> (Output a, Maybe (Vec n a))     -- input vector and the output of priorityQueue as input of this contro logic
          -> HeapSortState (n+1) a       -- new state
-heapSort (HSS vec _)           ((Out (Left  _)       _), _)         = HSS vec SError         -- error handling
-heapSort (HSS vec SError)  _                                        = HSS vec SError         -- error handling
-heapSort oldState              ((Out (Right Pushing) _), _)         = oldState               -- the priority queue is busy pushing, ignore input, keep state as is
-heapSort oldState              ((Out (Right Poping)  _), _)         = oldState               -- the priority queue is busy Poping, ignore input, keep state as is
-heapSort oldst@(HSS _ Sorted)  ((Out (Right Ready)   _), Nothing)   = oldst                  -- Nothing to do
-heapSort (HSS _ Sorted)        ((Out (Right Ready)   _), (Just v))  = HSS (def:>v) (SPush 1) -- init
-heapSort (HSS vec (SPush idx)) ((Out (Right Ready)   _), _)
+heapSortS (HSS vec _)           ((Out (Left  _)       _), _)         = HSS vec SError         -- error handling
+heapSortS (HSS vec SError)  _                                        = HSS vec SError         -- error handling
+heapSortS oldState              ((Out (Right Pushing) _), _)         = oldState               -- the priority queue is busy pushing, ignore input, keep state as is
+heapSortS oldState              ((Out (Right Poping)  _), _)         = oldState               -- the priority queue is busy Poping, ignore input, keep state as is
+heapSortS oldst@(HSS _ Sorted)  ((Out (Right Ready)   _), Nothing)   = oldst                  -- Nothing to do
+heapSortS (HSS _ Sorted)        ((Out (Right Ready)   _), (Just v))  = HSS (def:>v) (SPush 1) -- init
+heapSortS (HSS vec (SPush idx)) ((Out (Right Ready)   _), _)
     | pushFinished       = HSS vec $ SPop (fromInteger $ maxIndex vec)
     | otherwise          = HSS vec $ SPush (idx + 1)
       where pushFinished = idx >= (fromInteger $ length vec)
-heapSort (HSS vec (SPop idx))  ((Out (Right Ready)  (Just top)), _)
+heapSortS (HSS vec (SPop idx))  ((Out (Right Ready)  (Just top)), _)
     | popFinished = HSS vec Sorted
     | otherwise   = HSS (vec <<+ top) $ SPop $ idx - 1
       where popFinished = idx == 0
-
-heapSortOut :: (KnownNat (n+1), Ord a) 
+heapSortO :: (KnownNat (n+1), Ord a) 
             => HeapSortState (n+1) a
-            -> Maybe (Vec n a)
-heapSortOut = undefined
+            -> (Input a, Maybe (Vec n a))
+heapSortO (HSS vec Sorted)      = (Nop, Just $ tail vec)
+heapSortO (HSS vec SError)      = (Nop, Nothing)
+heapSortO (HSS vec (SPop _))    = (Pop, Nothing)
+heapSortO (HSS vec (SPush idx)) = (Push $ vec !! idx , Nothing)
+heapSortInitState :: (KnownNat (n+1), Default a) => HeapSortState (n+1) a
+heapSortInitState = HSS (repeat def) Sorted
+heapSortCtrl = moore heapSortS heapSortO heapSortInitState
 topEntity :: Signal (Input Int) -> Signal (Output Int)
 topEntity = moore minQS getOut (initState 0 :: InnerState 100 Int)
 testInput :: Signal (Input Int)
