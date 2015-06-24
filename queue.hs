@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月23日 星期二 22时36分30秒 二
+-- Last Modified:2015年06月24日 星期三 09时26分53秒 三
 import CLaSH.Prelude
 type Size           = Unsigned 16
 data NormalStatus   = Pushing  | Poping | Ready deriving(Show)
@@ -13,8 +13,8 @@ data InnerState n a = S {
     queue  :: Vec n a
 } deriving(Show)
 
-data Output a = Out QueueStatus (Maybe a)
-data Input a  = Push a | Pop | Nop
+data Output a = Out QueueStatus (Maybe a)   deriving(Show)
+data Input a  = Push a | Pop | Nop          deriving(Show)
 
 initState x = S (Right Ready) 0 0 (repeat x)
 minQS = priorityQueueS LT
