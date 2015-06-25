@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月25日 星期四 12时10分02秒 四
+-- Last Modified:2015年06月25日 星期四 16时53分16秒 四
 import CLaSH.Prelude
 import Debug.Trace
 import qualified Data.List
@@ -149,14 +149,14 @@ minQ = moore minQS getOut (initState def :: InnerState VecSize Int)
 heapSort :: Signal (Maybe (Vec VecSize Int)) -> Signal (Maybe (Vec VecSize Int))
 heapSort = heapSortCircuit minQ heapSortCtrl
 
-topEntity = heapSort
 type VecSize = 10 
-testVec :: Maybe (Vec VecSize Int)
-testVec   = fmap reverse $ Just $(v [(1::Int) .. 10])
-testInput = stimuliGenerator $ testVec :> Nothing :> Nil
+-- topEntity = heapSort
+-- testVec :: Maybe (Vec VecSize Int)
+-- testVec   = fmap reverse $ Just $(v [(1::Int) .. 10])
+-- testInput = stimuliGenerator $ testVec :> Nothing :> Nil
 
 
 
-samp n = mapM_ print $ sampleN n bun
-    where bun :: Signal (Maybe (Vec VecSize Int), Maybe (Vec VecSize Int))
-          bun = bundle (testInput, topEntity testInput)
+-- samp n = mapM_ print $ sampleN n bun
+--     where bun :: Signal (Maybe (Vec VecSize Int), Maybe (Vec VecSize Int))
+--           bun = bundle (testInput, topEntity testInput)
