@@ -1,6 +1,6 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月24日 星期三 22时41分50秒 三
+-- Last Modified:2015年06月25日 星期四 12时10分02秒 四
 import CLaSH.Prelude
 import Debug.Trace
 import qualified Data.List
@@ -152,12 +152,11 @@ heapSort = heapSortCircuit minQ heapSortCtrl
 topEntity = heapSort
 type VecSize = 10 
 testVec :: Maybe (Vec VecSize Int)
-testVec   = Just $(v [9,2,6,5,3,5,8,9,7,9::Int])
+testVec   = fmap reverse $ Just $(v [(1::Int) .. 10])
 testInput = stimuliGenerator $ testVec :> Nothing :> Nil
 
 
-fuck str = "\n" ~~ str ~~ "\n"
 
-samp n = mapM_ putStrLn $ fmap (fuck.show) $ sampleN n bun
+samp n = mapM_ print $ sampleN n bun
     where bun :: Signal (Maybe (Vec VecSize Int), Maybe (Vec VecSize Int))
           bun = bundle (testInput, topEntity testInput)

@@ -3,9 +3,10 @@
 ## Heapsort stat ##
 number of elements, and clock cycles used
 ```haskell
+-- sort descending elements to ascending order
 type VecSize = 10 
 testVec :: Maybe (Vec VecSize Int)
-testVec   = Just $(v [9,2,6,5,3,5,8,9,7,9::Int])
+testVec   = fmap reverse $ Just $(v [(1::Int) .. 10])
 testInput = stimuliGenerator $ testVec :> Nothing :> Nil
 ```
 * 100: 1264
