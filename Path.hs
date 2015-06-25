@@ -14,7 +14,8 @@ data Node = Node{
 
 data PathFinderState 
     = PWaiting 
-    | PInit 
+    | PInitMem (Unsigned 4)  -- read start from memory
+    | PInitQ                 -- push start to priority queue
     | PCheck
     | PCheckNeighbor
     | PPushNeighbor
@@ -41,7 +42,5 @@ aStarCtrl :: (Ord a)
           -> PathState
 aStarCtrl st@(PS info PError)   cin@_                                      = st
 aStarCtrl st@(PS info PWaiting) cin@((Q.Out (Left _) _),_)                 = PS info PError
-aStarCtrl st@(PS info PWaiting) cin@((Q.Out (Right Q.Ready)   _),Nothing)  = st               -- nothing todo
-aStarCtrl st@(PS info PWaiting) cin@((Q.Out (Right Q.Ready)   _),(Just i)) = PS i PInit       -- Waiting -> Init
-aStarCtrl st@(PS info PInit)    cin@((Q.Out (Right Q.Pushing) _),_)        = st
-aStarCtrl st@(PS info PInit)    cin@((Q.Out (Right Q.Poping)  _),_)        = PS info PError
+aStarCtrl st@(PS info PWaiting) cin@((Q.Out (Right Q.Ready)   _),Nothing)  = st                -- nothing todo
+aStarCtrl st@(PS info PWaiting) cin@((Q.Out (Right Q.Ready)   _),(Just i)) = PS i (PInitMem 1) -- Waiting -> Init
