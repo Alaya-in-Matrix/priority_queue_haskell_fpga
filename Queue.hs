@@ -1,11 +1,11 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月25日 星期四 16时53分16秒 四
+-- Last Modified:2015年06月26日 星期五 10时20分31秒 五
 import CLaSH.Prelude
 import Debug.Trace
 import qualified Data.List
 type Size           = Unsigned 16
-data NormalStatus   = Pushing  | Poping | Ready deriving(Show)
+data NormalStatus   = Pushing  | Popping | Ready deriving(Show)
 data ErrorStatus    = Overflow | Empty deriving(Show)
 type QueueStatus    = Either ErrorStatus NormalStatus
 data InnerState n a = S {
@@ -32,14 +32,14 @@ priorityQueueS _   st@(S (Right Ready)   _ _ _)  qIn@Nop        = st            
 priorityQueueS _   st@(S (Right Ready)   _ _ _)  qIn@Pop        = initPop  st           -- Received pop signal
 priorityQueueS _   st@(S (Right Ready)   _ _ _)  qIn@(Push val) = initPush st val       -- Received push signal
 priorityQueueS ord st@(S (Right Pushing) _ _ _)  qIn@_          = processPush ord st    -- Processing push
-priorityQueueS ord st@(S (Right Poping)  _ _ _)  qIn@_          = processPop  ord st    -- Processing pop
+priorityQueueS ord st@(S (Right Popping)  _ _ _)  qIn@_          = processPop  ord st    -- Processing pop
 
 
 -- 可能的改进： 有error时top为nothing 
 -- 可能的改进： normal但是不是ready是为nothing
 initPop :: (KnownNat (n+1), Ord a) => InnerState (n+1) a -> InnerState (n+1) a
 initPop (S st 0  id qu) = S (Left  Empty)  0      id qu
-initPop (S st sz id qu) = S (Right Poping) (sz-1) 0 nqu 
+initPop (S st sz id qu) = S (Right Popping) (sz-1) 0 nqu 
     where nqu = replace 0 (qu !! (sz - 1)) qu
 initPush :: (KnownNat (n+1), Ord a) => InnerState (n+1) a -> a -> InnerState (n+1) a
 initPush (S st sz id qu) val
@@ -114,7 +114,7 @@ heapSortS :: (KnownNat (n+1), Ord a, Default a, Show a)
 heapSortS oldst@(HSS vec _)           qOut@((Out (Left  _)       _), _)        = HSS vec SError         -- error handling
 heapSortS oldst@(HSS vec SError)      qOut@ _                                  = HSS vec SError         -- error handling
 heapSortS oldst                       qOut@((Out (Right Pushing) _), _)        = oldst               -- the priority queue is busy pushing, ignore input, keep state as is
-heapSortS oldst                       qOut@((Out (Right Poping)  _), _)        = oldst               -- the priority queue is busy Poping, ignore input, keep state as is
+heapSortS oldst                       qOut@((Out (Right Popping)  _), _)        = oldst               -- the priority queue is busy Popping, ignore input, keep state as is
 heapSortS oldst@(HSS _ Sorted)        qOut@((Out (Right Ready)   _), Nothing)  = oldst                  -- Nothing to do
 heapSortS oldst@(HSS _ Sorted)        qOut@((Out (Right Ready)   _), (Just v)) = HSS (def:>v) (SPush 1) -- init
 heapSortS oldst@(HSS vec (SPush idx)) qOut@((Out (Right Ready)   _), _)
