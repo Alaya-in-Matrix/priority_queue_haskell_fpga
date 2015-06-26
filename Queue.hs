@@ -1,13 +1,13 @@
 module Queue where 
 -- Author: lvwenlong_lambda@qq.com
--- Last Modified:2015年06月26日 星期五 10时20分31秒 五
+-- Last Modified:2015年06月26日 星期五 15时47分01秒 五
 import CLaSH.Prelude
 import Debug.Trace
 import qualified Data.List
 type Size           = Unsigned 16
-data NormalStatus   = Pushing  | Popping | Ready deriving(Show)
-data ErrorStatus    = Overflow | Empty deriving(Show)
-type QueueStatus    = Either ErrorStatus NormalStatus
+data NormalStatus   = Pushing  | Popping | Ready deriving(Show,Eq)
+data ErrorStatus    = Overflow | Empty deriving(Show,Eq)
+type QueueStatus    = Either ErrorStatus NormalStatus 
 data InnerState n a = S {
     status :: QueueStatus,
     size   :: Size,
