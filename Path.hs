@@ -1,6 +1,7 @@
 module Path where 
 import qualified Queue as Q
 import CLaSH.Prelude
+import Debug.Trace
 
 topEntity = undefined
 
@@ -22,9 +23,12 @@ aStarCtrl st@(PS mdc info _        u v upC)         cin@((Q.Out (Left Q.Empty)  
 aStarCtrl st@(PS mdc info _        u v upC)         cin@((Q.Out (Left Q.Overflow) _), _,        _)   = PS mdc     info (PError QOverflow) u  v upC
 aStarCtrl st@(PS mdc info PWaiting u v upC)         cin@((Q.Out (Right Q.Ready)   _), Nothing,  _)   = st                              -- nothing todo
 aStarCtrl st@(PS mdc info PWaiting u v upC)         cin@((Q.Out (Right Q.Ready)   _), (Just i), _)   = PS mdc     info PInitMem           u  v upC        -- Waiting -> Init
+aStarCtrl st@(PS mdc info PWaiting u v upC)         cin@((Q.Out (Right _)         _), _,        _)   = PS mdc     info (PError Unknown)   u  v upC
 aStarCtrl st@(PS 0   info PInitMem u v upC)         cin@((Q.Out (Right Q.Ready)   _), _,        rv)  = PS 0       info PInitQ             rv v upC           -- finished reading mem
 aStarCtrl st@(PS mdc info PInitMem u v upC)         cin@((Q.Out (Right Q.Ready)   _), _,        _)   = PS (mdc-1) info PInitMem           u  v upC    -- reading mem
+aStarCtrl st@(PS mdc info PInitMem u v upC)         cin@((Q.Out (Right _)         _), _,        _)   = PS (mdc-1) info (PError Unknown)   u  v upC    -- reading mem
 aStarCtrl st@(PS mdc info PInitQ   u v upC)         cin@((Q.Out (Right Q.Ready)   _), _,        _)   = PS mdc     info PCheck             u  v upC
+aStarCtrl st@(PS mdc info PCheck   u v upC)         cin@((Q.Out (Right Q.Popping) _), _,        _)   = PS mdc     info (PError Unknown)   u  v upC
 aStarCtrl st@(PS mdc info PCheck   u v upC)         cin@((Q.Out (Right Q.Pushing) _), _,        _)   = st
 aStarCtrl st@(PS mdc info PCheck   u v upC)         cin@((Q.Out (Right Q.Ready)   Nothing),    _, _) = PS mdc     info (PError Unknown)   u  v upC
 aStarCtrl st@(PS mdc info PCheck   u v upC)         cin@((Q.Out (Right Q.Ready)   (Just top)), _, _)
@@ -57,7 +61,6 @@ data PathState   = PS {
     vNodes :: Vec 4 Node,
     upCounter :: (Unsigned 2)
 } deriving(Show)
-
 data Node        = Node{ idx :: Int, pred :: Int, g :: Int, h :: Int, isObstacle :: Bool } deriving(Show)
 data Info        = In{ xMax  :: Int, yMax  :: Int, start :: Int, end   :: Int } deriving(Show)
 data PathFinderState = PWaiting 
