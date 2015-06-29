@@ -1,5 +1,3 @@
 *.swp
 *.hi
 *.o
-# verilog, temporally ignored
-verilog/
