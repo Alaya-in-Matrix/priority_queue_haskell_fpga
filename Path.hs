@@ -145,7 +145,7 @@ dikjstraCtrlLogic = (aStarCtrl heurDikj) `mealy` def
 minQ = moore Q.minQS Q.getOut (Q.initState def :: Q.InnerState VecSize Node)
 x    = 4
 y    = 4
-s    = 0
+s    = 3
 e    = 15
 maxDist :: Dist
 maxDist = shiftR maxBound 1
@@ -157,17 +157,17 @@ bram = blockRam (n0:> n1 :> n2 :> n3:> n4:> n5 :> n6 :> n7:> n8:>n9:> n10 :> n11
               n2 = (Node 2 maxBound maxDist maxDist False)
               n3 = (Node 3 maxBound maxDist maxDist False)
               n4 = (Node 4 maxBound maxDist maxDist False)
-              n5 = (Node 5 maxBound maxDist maxDist False)
+              n5 = (Node 5 maxBound maxDist maxDist True)
               n6 = (Node 6 maxBound maxDist maxDist False)
-              n7 = (Node 7 maxBound maxDist maxDist False)
+              n7 = (Node 7 maxBound maxDist maxDist True)
               n8 = (Node 8 maxBound maxDist maxDist False)
-              n9 = (Node 2 maxBound maxDist maxDist False)
-              n10 = (Node 11 maxBound maxDist maxDist False)
-              n11 = (Node 12 maxBound maxDist maxDist False)
-              n12 = (Node 13 maxBound maxDist maxDist False)
-              n13 = (Node 14 maxBound maxDist maxDist False)
-              n14 = (Node 15 maxBound maxDist maxDist False)
-              n15 = (Node 16 maxBound maxDist maxDist False)
+              n9 = (Node 9 maxBound maxDist maxDist False)
+              n10 = (Node 10 maxBound maxDist maxDist False)
+              n11 = (Node 11 maxBound maxDist maxDist True)
+              n12 = (Node 12 maxBound maxDist maxDist True)
+              n13 = (Node 13 maxBound maxDist maxDist True)
+              n14 = (Node 14 maxBound maxDist maxDist False)
+              n15 = (Node 15 maxBound maxDist maxDist False)
 pathCircuit :: (Signal (Q.Input Node) -> Signal (Q.Output Node))
             -> (Signal Addr -> Signal Addr -> Signal Bool -> Signal Node -> Signal Node)
             -> ((Signal PathInput) -> (Signal PathOut))
@@ -184,7 +184,7 @@ pathCircuit minQ bram ctrl pIn = fmap pathNode pOut
 topEntity = pathCircuit minQ bram dikjstraCtrlLogic
 testInput :: Signal (Maybe Info)
 testInput = signal (Just graphInfo)
--- f n = mapM_ p $ samp
---     where samp = sampleN n (topEntity testInput)
---           p x = do 
---               print x
+f n = mapM_ p $ samp
+    where samp = sampleN n (topEntity testInput)
+          p x = do 
+              print x
